@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Turbo C3 — js-dos Emulator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- Local js-dos files -->
+  <link id="dos-css" rel="stylesheet" href="js-dos.min.css">
+  <script id="dos-script" src="js-dos.min.js" onerror="handleScriptError(event)"></script>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin:12px; background:#111; color:#eee; }
+    h1 { margin:0 0 10px 0; color:#00bcd4; }
+    #controls { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
+    button { padding:10px 14px; border-radius:6px; border:none; background:#00bcd4; color:#000; cursor:pointer; font-weight:bold; }
+    button.secondary { background:#6c757d; }
+    button.warn { background:#d9534f; color:#fff; }
+    #dos-container { width:95vw; height:70vh; border:2px solid #444; background:#000; margin:auto; }
+    #status { margin-top:10px; padding:10px; background:#222; border-radius:6px; min-height:24px; color:#00ffcc; }
+    #log { margin-top:12px; background:#000; color:#0f0; padding:10px; border-radius:6px; height:300px; overflow:auto; font-family: monospace; font-size:12px; }
+  </style>
+</head>
+
+<body>
+  <h1>Turbo C3 — Emulator & Diagnostic</h1>
+
+  <div id="controls">
+    <button id="checkBrowser">Check Browser</button>
+    <button id="checkResources">Check Files</button>
+    <button id="runTurboC">Run Turbo C3</button>
+    <button id="stopEmu" class="warn">Stop</button>
+  </div>
+
+  <div id="dos-container"></div>
+  <div id="status">Status: Idle</div>
+  <div id="log" role="log" aria-live="polite"><pre></pre></div>
+
+  <script>
+  const logEl = document.querySelector('#log pre');
+  function log(...args) {
+    const ts = new Date().toISOString();
+    const text = args.map(a => typeof a === 'object' ? JSON.stringify(a,null,2) : a).join(' ');
+    console.log(ts, ...args);
+    logEl.textContent += `\n[${ts}] ${text}`;
+    logEl.parentElement.scrollTop = logEl.parentElement.scrollHeight;
+  }
+  function setStatus(s){ document.getElementById('status').textContent = 'Status: ' + s; }
+
+  window.addEventListener('error', e => { log('ERROR:', e.message || e); setStatus('Error'); });
+  window.addEventListener('unhandledrejection', e => { log('Unhandled promise rejection:', e.reason); setStatus('Promise Error'); });
+  function handleScriptError(e){ log('Script failed:', e.target.src); setStatus('js-dos load failed'); }
+
+  let dosInstance = null;
+  let ci = null;
+
+  // Browser feature check
+  document.getElementById('checkBrowser').addEventListener('click', () => {
+    setStatus('Checking browser');
+    log('User Agent:', navigator.userAgent);
+    log('WebAssembly:', typeof WebAssembly !== 'undefined');
+    try { new SharedArrayBuffer(1); log('SharedArrayBuffer supported'); } catch { log('SharedArrayBuffer blocked'); }
+    log('IndexedDB:', !!window.indexedDB);
+    setStatus('Browser check complete');
+  });
+
+  // Resource check
+  document.getElementById('checkResources').addEventListener('click', async () => {
+    setStatus('Checking files');
+    const zip = 'Turboc3.zip';
+    try {
+      const r = await fetch(zip, { method:'HEAD' });
+      if (r.ok) log(`${zip} found (${r.status})`);
+      else log(`${zip} not reachable (${r.status})`);
+    } catch (err) {
+      log('Fetch failed:', err);
+    }
+    setStatus('File check complete');
+  });
+
+  // Run Turbo C3
+  document.getElementById('runTurboC').addEventListener('click', async () => {
+  try {
+    setStatus('Starting Turbo C3...');
+    if (dosInstance) { await dosInstance.stop(); log('Previous instance stopped.'); }
+
+    dosInstance = Dos(document.getElementById('dos-container'), {
+      url: "Turboc3.zip",
+      command: "TURBOC3\\BIN\\TC.EXE",  // Directly launch this exe on start
+      onEvent: (event, commandInterface) => {
+        if (event === 'ready' || event === 'ci-ready') {
+          ci = commandInterface;
+          log('Emulator ready, running TC.EXE...');
+          setStatus('Turbo C3 running');
+        }
+      },
+      onError: (err) => { log('Emulator error:', err); setStatus('Error starting Turbo C3'); }
+    });
+
+  } catch (e) {
+    log('Startup failed:', e);
+    setStatus('Startup failed');
+  }
+});
+
+
+  // Stop
+  document.getElementById('stopEmu').addEventListener('click', async () => {
+    if (dosInstance) {
+      try { await dosInstance.stop(); log('Stopped emulator'); }
+      catch (e) { log('Stop failed:', e); }
+      dosInstance = null; ci = null;
+    }
+    setStatus('Stopped');
+  });
+
+  // Quick startup check
+  (function quickCheck(){
+    log('Starting diagnostics...');
+    if (location.protocol === 'file:') log('⚠ Run via a local HTTP server (python -m http.server 8080)');
+    log('Expecting Turboc3.zip next to this file.');
+    if (typeof Dos === 'undefined') setStatus('js-dos missing');
+    else setStatus('Ready');
+  })();
+  </script>
+</body>
+</html>
