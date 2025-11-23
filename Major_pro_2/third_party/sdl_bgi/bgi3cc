@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# bgi3cc, helper script for SDL3_bgi
+
+MYSELF=$(basename $0)
+
+if [ $# -eq 0 ] ; then
+  printf "Usage: ${MYSELF} <program.c>\n"
+  exit 1
+fi
+
+CC=clang
+OS=$(uname | cut -b -7)
+
+if [ "MINGW64x" = ${OS}x ] ; then
+  LIBS="-lmingw32 -L/ucrt64/bin -lSDL3_bgi -lSDL3"
+  INCLUDES="-I. -I/ucrt64/include -I/ucrt64/include/SDL3"
+else # GNU/Linux, macOS
+  LIBS="-lSDL3_bgi -lSDL3"
+  INCLUDES=
+fi
+
+FILE=$(basename $1 .c)
+echo "executing '$CC -o $FILE $FILE.c $INCLUDES $LIBS'"
+$CC -o $FILE $FILE.c $LIBS

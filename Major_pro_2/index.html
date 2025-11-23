@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Editor</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+</head>
+
+<body>
+    <div id="editor-container">
+        <textarea id="code-editor" placeholder="Enter your C++ code here...">#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello, World!" << endl;
+    return 0;
+}</textarea>
+    </div>
+
+    <button id="run-button">Run</button>
+
+    <div id="canvas-area">
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+
+    <!-- CodeMirror JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/clike/clike.min.js"></script>
+
+    <!-- REAL WebAssembly loader -->
+    <script src="wasm/libbgi.js"></script>
+
+    <!-- Main App -->
+    <script src="app.js"></script>
+
+</body>
+</html>
