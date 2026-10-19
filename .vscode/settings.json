@@ -1,8 +1,5 @@
 {
-    "liveServer.settings.https": {
-        "enable": true,
-        "cert": "cert.pem",
-        "key": "key.pem",
-        "port": 5501
-    }
+  "liveServer.settings.port": 5500,
+  "liveServer.settings.root": "/",
+  "liveServer.settings.NoBrowser": false
 }
