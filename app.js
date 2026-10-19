@@ -1,7 +1,9 @@
 (() => {
   "use strict";
 
-  const BUNDLE_URL = "Turboc3.zip";
+  const SOURCE_ARCHIVE_URL = "Turboc3.zip";
+  const DOSBOX_CONFIG_URL = ".jsdos/dosbox.conf";
+  const SAVE_KEY = "turbo-c3-web-lab-v1";
 
   const $ = (id) => document.getElementById(id);
   const ui = {
@@ -27,6 +29,7 @@
   let commandInterface = null;
   let paused = false;
   let booting = false;
+  let runtimeBundleUrl = null;
 
   function timestamp() {
     return new Date().toISOString().replace("T", " ").replace("Z", " UTC");
@@ -92,14 +95,41 @@
   }
 
   async function probeBundle() {
-    const response = await fetch(BUNDLE_URL, { method: "HEAD", cache: "no-store" });
+    const response = await fetch(SOURCE_ARCHIVE_URL, { method: "HEAD", cache: "no-store" });
     if (!response.ok) {
-      throw new Error(`${BUNDLE_URL} returned HTTP ${response.status}`);
+      throw new Error(`${SOURCE_ARCHIVE_URL} returned HTTP ${response.status}`);
     }
     const bytes = Number(response.headers.get("content-length"));
     return Number.isFinite(bytes) && bytes > 0
       ? `${(bytes / 1024 / 1024).toFixed(2)} MiB`
       : "reachable";
+  }
+
+  async function ensureRuntimeBundle() {
+    if (runtimeBundleUrl) return runtimeBundleUrl;
+    if (typeof window.emulators?.bundle !== "function") {
+      throw new Error("js-dos bundle builder failed to load.");
+    }
+
+    log("Building js-dos runtime bundle...");
+    const configResponse = await fetch(DOSBOX_CONFIG_URL, { cache: "no-store" });
+    if (!configResponse.ok) {
+      throw new Error(`${DOSBOX_CONFIG_URL} returned HTTP ${configResponse.status}`);
+    }
+
+    const dosboxConf = await configResponse.text();
+    const builder = await window.emulators.bundle();
+    builder.extract(SOURCE_ARCHIVE_URL, "/");
+    builder.dosboxConf = dosboxConf;
+
+    const bytes = await builder.toUint8Array(true);
+    if (!bytes?.byteLength) {
+      throw new Error("Runtime bundle builder returned an empty bundle.");
+    }
+
+    runtimeBundleUrl = URL.createObjectURL(new Blob([bytes], { type: "application/zip" }));
+    log("Runtime bundle ready", `${(bytes.byteLength / 1024 / 1024).toFixed(2)} MiB`);
+    return runtimeBundleUrl;
   }
 
   async function runDiagnostics() {
@@ -130,6 +160,12 @@
     );
 
     add(
+      "Bundle builder",
+      typeof window.emulators?.bundle === "function" ? "pass" : "fail",
+      typeof window.emulators?.bundle === "function" ? "Ready" : "emulators.js did not load"
+    );
+
+    add(
       "IndexedDB",
       "indexedDB" in window ? "pass" : "warn",
       "indexedDB" in window ? "Available for local persistence" : "Local persistence may be unavailable"
@@ -145,9 +181,9 @@
 
     try {
       const bundleInfo = await probeBundle();
-      add("Turbo C3 bundle", "pass", `${BUNDLE_URL} • ${bundleInfo}`);
+      add("Turbo C3 archive", "pass", `${SOURCE_ARCHIVE_URL} • ${bundleInfo}`);
     } catch (error) {
-      add("Turbo C3 bundle", "fail", error.message);
+      add("Turbo C3 archive", "fail", error.message);
     }
 
     renderChecks(checks);
@@ -205,11 +241,12 @@
       }
 
       await probeBundle();
+      const bundleUrl = await ensureRuntimeBundle();
       await stopPlayer({ quiet: true });
       hideEmptyState();
 
       player = window.Dos(ui.container, {
-        url: BUNDLE_URL,
+        url: bundleUrl,
         autoStart: true,
         autoSave: true,
         theme: "dark",
@@ -217,7 +254,10 @@
         backendLocked: true,
         imageRendering: "pixelated",
         renderAspect: "4/3",
-        fsChanges: { local: true },
+        fsChanges: {
+          local: true,
+          urlToKey: async () => SAVE_KEY,
+        },
         onEvent: (event, arg) => {
           log(`js-dos event: ${event}`);
 
