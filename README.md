@@ -159,7 +159,7 @@ The DOS runtime may also load js-dos emulator deployment files from js-dos infra
 
 ## Discoverability and project documentation
 
-This README uses descriptive, problem-focused language so students and search systems can determine what the project does. Prefer verified examples, clear compatibility notes, screenshots, and accessible deployment documentation over keyword stuffing or unproven claims. See [SEO, AEO & GEO research backlog](docs/SEARCH_DISCOVERY_RESEARCH.md) for future investigation. No optimization guarantees inclusion in AI answers.
+This README uses descriptive, problem-focused language so students and search systems can determine what the project does. Prefer verified examples, clear compatibility notes, screenshots, and accessible deployment documentation over keyword stuffing or unproven claims. No optimization guarantees inclusion in AI answers.
 
 ## Redistribution notice
 
