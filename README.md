@@ -2,17 +2,18 @@
 
 A browser-hosted Turbo C3 / Turbo C++ DOS development environment powered by **js-dos**.
 
-The project packages the legacy Turbo C3 environment so it can be launched from a modern browser without installing DOSBox or Turbo C locally. The browser runs the DOS environment through WebAssembly and starts the Turbo C IDE from `TURBOC3\BIN\TC.EXE`.
+The project launches the legacy Turbo C3 environment from a modern browser without requiring a local DOSBox or Turbo C installation. `Turboc3.zip` is treated as the source archive; the browser combines it with `.jsdos/dosbox.conf` to build a valid js-dos bundle at runtime and starts `TURBOC3\BIN\TC.EXE`.
 
 ## What this project does
 
 - Runs Turbo C3 directly in a modern browser.
-- Uses the local `Turboc3.zip` bundle as the DOS filesystem.
+- Builds a valid js-dos runtime bundle in-browser from `Turboc3.zip` plus `.jsdos/dosbox.conf`.
 - Starts the emulator through the supported js-dos player API.
 - Provides start, restart, pause/resume, save-state, fullscreen, and stop controls.
 - Persists local filesystem changes through js-dos/IndexedDB when supported.
-- Includes browser and bundle diagnostics with a runtime log.
-- Works as a static site; no backend is required.
+- Uses a stable save key even though the runtime bundle is created as a temporary Blob URL.
+- Includes browser, archive, and bundle-builder diagnostics with a runtime log.
+- Works as a static site; no application backend is required.
 
 ## Architecture
 
@@ -24,18 +25,22 @@ Browser
   |    +-- app.js
   |    +-- js-dos.min.css
   |    +-- js-dos.min.js
+  |    +-- js-dos emulators bundle builder
   |
-  +-- js-dos / WebAssembly DOS runtime
-         |
-         +-- Turboc3.zip
-                |
-                +-- .jsdos/dosbox.conf
-                +-- TURBOC3/
-                     +-- BIN/TC.EXE
-                     +-- INCLUDE/
-                     +-- LIB/
-                     +-- BGI/
-                     +-- Projects/
+  +-- app.js
+       |
+       +-- fetch Turboc3.zip
+       +-- fetch .jsdos/dosbox.conf
+       +-- build valid js-dos bundle in memory
+       |
+       +-- js-dos / WebAssembly DOS runtime
+              |
+              +-- TURBOC3/
+                   +-- BIN/TC.EXE
+                   +-- INCLUDE/
+                   +-- LIB/
+                   +-- BGI/
+                   +-- Projects/
 ```
 
 ## Run locally
@@ -56,17 +61,23 @@ http://localhost:8080
 
 ### VS Code Live Server
 
-The repository also contains a `.vscode/settings.json` configuration for Live Server. Start Live Server from the repository root and open the generated localhost URL.
+The repository contains a `.vscode/settings.json` configuration for Live Server. Start Live Server from the repository root and open the generated localhost URL.
 
-## Bundle startup
+## Startup configuration
 
-The DOS startup configuration is maintained in `.jsdos/dosbox.conf` and should also be present inside the runtime js-dos bundle. It launches:
+The DOS startup configuration is stored in:
 
 ```text
-TURBOC3\BIN\TC.EXE
+.jsdos/dosbox.conf
 ```
 
-For current js-dos v7/v8, startup configuration belongs in the js-dos bundle rather than in a custom JavaScript `command` option.
+It mounts the runtime filesystem, enters `TURBOC3\BIN`, and launches:
+
+```text
+TC.EXE
+```
+
+The page injects this configuration into a js-dos bundle at runtime. This avoids depending on undocumented JavaScript startup options and also means the committed `Turboc3.zip` does not need to be trusted to already contain correct js-dos metadata.
 
 ## Diagnostics
 
@@ -75,6 +86,7 @@ Open **Diagnostics** in the page to inspect:
 - HTTP/file protocol status
 - WebAssembly support
 - js-dos player availability
+- js-dos bundle-builder availability
 - IndexedDB availability
 - SharedArrayBuffer availability
 - `Turboc3.zip` reachability and reported size
@@ -91,19 +103,29 @@ Open **Diagnostics** in the page to inspect:
 ├── .vscode/
 │   └── settings.json
 ├── TURBOC3/              # extracted legacy environment
-├── Turboc3.zip           # runtime bundle
-├── app.js                # application/emulator controller
+├── Turboc3.zip           # source archive
+├── app.js                # bundle builder + emulator controller
 ├── index.html            # web UI
 ├── styles.css            # responsive UI styling
 ├── js-dos.min.css
 └── js-dos.min.js
 ```
 
+## External runtime dependency
+
+The page loads the current js-dos emulator bundle-builder from:
+
+```text
+https://v8.js-dos.com/latest/emulators/emulators.js
+```
+
+The DOS runtime may also load js-dos emulator deployment files from js-dos infrastructure. For a fully offline deployment, those runtime assets should be vendored into the repository and `pathPrefix` should be pointed at the local copy.
+
 ## Notes
 
 - The emulator wrapper is intentionally separated from the legacy Turbo C files.
 - Local save-state behavior depends on browser storage availability.
-- If the bundle is replaced, keep `.jsdos/dosbox.conf` in the bundle and preserve the expected `TURBOC3` path.
+- Replacing `Turboc3.zip` does not require manually editing the archive to add `.jsdos/dosbox.conf`; the page injects the config while building the runtime bundle.
 
 ## Redistribution notice
 
