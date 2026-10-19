@@ -4,6 +4,22 @@ A browser-hosted Turbo C3 / Turbo C++ DOS development environment powered by **j
 
 The project launches the legacy Turbo C3 environment from a modern browser without requiring a local DOSBox or Turbo C installation. `Turboc3.zip` is treated as the source archive; the browser combines it with `.jsdos/dosbox.conf` to build a valid js-dos bundle at runtime and starts `TURBOC3\BIN\TC.EXE`.
 
+## Why I built this
+
+This project started from a very practical frustration. In many computer science courses, especially introductory **Computer Graphics** classes, students are still expected to write C/C++ programs using the legacy `graphics.h` / BGI environment. Those programs are commonly demonstrated through Turbo C or Turbo C++ running under DOS or DOSBox.
+
+For me, repeatedly setting up and working inside that old DOS-based environment was frustrating. Modern compilers and most online C/C++ playgrounds work well for standard C and C++, but they generally do not reproduce the original Borland `graphics.h` environment that these coursework programs depend on. That meant something as simple as drawing shapes, experimenting with BGI primitives, or building small graphics animations still pushed students back toward a decades-old toolchain.
+
+A friend and I started asking a simple question: **what if the whole environment could just run in the browser?**
+
+While exploring that idea, we ended up learning about **WebAssembly (Wasm)**, browser sandboxing, emulation, Web Workers, `SharedArrayBuffer`, persistent browser storage, and the amount of computation modern browsers can safely perform. WebAssembly is not an assembly language in the traditional CPU-specific sense; it is a portable low-level bytecode designed to execute efficiently inside a browser sandbox. Technologies built on top of it can run software that was never originally designed for the web, which is one reason browser-based emulators and ports of older games are practical today.
+
+That led us to experiment with running a DOS environment through **js-dos**, loading the original Turbo C3 toolchain inside it, and checking whether legacy `graphics.h` programs could work without making the student manually configure DOSBox.
+
+After a fair amount of experimentation, debugging, and learning how the browser runtime behaves, the idea became this project: a **zero-install browser-accessible Turbo C3 environment** aimed particularly at the kind of legacy C/C++ graphics coursework that is still taught today.
+
+The project did not make DOS irrelevant for me—in fact, working through the problem taught me more about DOS, emulation, browser runtimes, and compatibility layers than simply avoiding the old environment would have. What began as an attempt to remove a frustrating setup step became an exploration of how modern web technology can keep legacy development environments usable.
+
 ## What this project does
 
 - Runs Turbo C3 directly in a modern browser.
