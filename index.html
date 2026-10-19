@@ -2,126 +2,75 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Turbo C3 — js-dos Emulator</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#090b10" />
+  <meta name="description" content="Run the classic Turbo C3 development environment directly in a modern browser with js-dos." />
+  <title>Turbo C3 Web Lab</title>
 
-  <!-- Local js-dos files -->
-  <link id="dos-css" rel="stylesheet" href="js-dos.min.css">
-  <script id="dos-script" src="js-dos.min.js" onerror="handleScriptError(event)"></script>
-
-  <style>
-    body { font-family: Arial, sans-serif; margin:12px; background:#111; color:#eee; }
-    h1 { margin:0 0 10px 0; color:#00bcd4; }
-    #controls { display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 14px; }
-    button { padding:10px 14px; border-radius:6px; border:none; background:#00bcd4; color:#000; cursor:pointer; font-weight:bold; }
-    button.secondary { background:#6c757d; }
-    button.warn { background:#d9534f; color:#fff; }
-    #dos-container { width:95vw; height:70vh; border:2px solid #444; background:#000; margin:auto; }
-    #status { margin-top:10px; padding:10px; background:#222; border-radius:6px; min-height:24px; color:#00ffcc; }
-    #log { margin-top:12px; background:#000; color:#0f0; padding:10px; border-radius:6px; height:300px; overflow:auto; font-family: monospace; font-size:12px; }
-  </style>
+  <link rel="stylesheet" href="js-dos.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <script src="js-dos.min.js" defer></script>
+  <script src="app.js" defer></script>
 </head>
-
 <body>
-  <h1>Turbo C3 — Emulator & Diagnostic</h1>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">DOS DEVELOPMENT ENVIRONMENT</p>
+        <h1>Turbo C3 Web Lab</h1>
+        <p class="subtitle">A zero-install Turbo C/C++ environment powered by js-dos.</p>
+      </div>
+      <div class="status-pill" id="statusPill" data-state="idle" aria-live="polite">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="statusText">Idle</span>
+      </div>
+    </header>
 
-  <div id="controls">
-    <button id="checkBrowser">Check Browser</button>
-    <button id="checkResources">Check Files</button>
-    <button id="runTurboC">Run Turbo C3</button>
-    <button id="stopEmu" class="warn">Stop</button>
-  </div>
+    <section class="toolbar" aria-label="Emulator controls">
+      <button class="primary" id="startBtn" type="button">Start Turbo C3</button>
+      <button id="restartBtn" type="button" disabled>Restart</button>
+      <button id="pauseBtn" type="button" disabled>Pause</button>
+      <button id="saveBtn" type="button" disabled>Save state</button>
+      <button id="fullscreenBtn" type="button" disabled>Fullscreen</button>
+      <button class="danger" id="stopBtn" type="button" disabled>Stop</button>
+      <button class="ghost" id="diagnosticsBtn" type="button" aria-expanded="false">Diagnostics</button>
+    </section>
 
-  <div id="dos-container"></div>
-  <div id="status">Status: Idle</div>
-  <div id="log" role="log" aria-live="polite"><pre></pre></div>
+    <section class="emulator-frame" aria-label="Turbo C3 emulator">
+      <div id="dos-container">
+        <div class="empty-state" id="emptyState">
+          <div class="terminal-mark" aria-hidden="true">C:\&gt;_</div>
+          <h2>Ready to boot</h2>
+          <p>Start the emulator to launch <code>TURBOC3\BIN\TC.EXE</code>.</p>
+        </div>
+      </div>
+    </section>
 
-  <script>
-  const logEl = document.querySelector('#log pre');
-  function log(...args) {
-    const ts = new Date().toISOString();
-    const text = args.map(a => typeof a === 'object' ? JSON.stringify(a,null,2) : a).join(' ');
-    console.log(ts, ...args);
-    logEl.textContent += `\n[${ts}] ${text}`;
-    logEl.parentElement.scrollTop = logEl.parentElement.scrollHeight;
-  }
-  function setStatus(s){ document.getElementById('status').textContent = 'Status: ' + s; }
+    <section class="diagnostics" id="diagnosticsPanel" hidden>
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">ENVIRONMENT CHECK</p>
+          <h2>Diagnostics</h2>
+        </div>
+        <button class="ghost" id="runDiagnosticsBtn" type="button">Run checks</button>
+      </div>
 
-  window.addEventListener('error', e => { log('ERROR:', e.message || e); setStatus('Error'); });
-  window.addEventListener('unhandledrejection', e => { log('Unhandled promise rejection:', e.reason); setStatus('Promise Error'); });
-  function handleScriptError(e){ log('Script failed:', e.target.src); setStatus('js-dos load failed'); }
+      <div class="checks" id="checks"></div>
 
-  let dosInstance = null;
-  let ci = null;
+      <div class="log-wrap">
+        <div class="log-heading">
+          <span>Runtime log</span>
+          <button class="text-button" id="clearLogBtn" type="button">Clear</button>
+        </div>
+        <pre id="log" role="log" aria-live="polite"></pre>
+      </div>
+    </section>
 
-  // Browser feature check
-  document.getElementById('checkBrowser').addEventListener('click', () => {
-    setStatus('Checking browser');
-    log('User Agent:', navigator.userAgent);
-    log('WebAssembly:', typeof WebAssembly !== 'undefined');
-    try { new SharedArrayBuffer(1); log('SharedArrayBuffer supported'); } catch { log('SharedArrayBuffer blocked'); }
-    log('IndexedDB:', !!window.indexedDB);
-    setStatus('Browser check complete');
-  });
-
-  // Resource check
-  document.getElementById('checkResources').addEventListener('click', async () => {
-    setStatus('Checking files');
-    const zip = 'Turboc3.zip';
-    try {
-      const r = await fetch(zip, { method:'HEAD' });
-      if (r.ok) log(`${zip} found (${r.status})`);
-      else log(`${zip} not reachable (${r.status})`);
-    } catch (err) {
-      log('Fetch failed:', err);
-    }
-    setStatus('File check complete');
-  });
-
-  // Run Turbo C3
-  document.getElementById('runTurboC').addEventListener('click', async () => {
-  try {
-    setStatus('Starting Turbo C3...');
-    if (dosInstance) { await dosInstance.stop(); log('Previous instance stopped.'); }
-
-    dosInstance = Dos(document.getElementById('dos-container'), {
-      url: "Turboc3.zip",
-      command: "TURBOC3\\BIN\\TC.EXE",  // Directly launch this exe on start
-      onEvent: (event, commandInterface) => {
-        if (event === 'ready' || event === 'ci-ready') {
-          ci = commandInterface;
-          log('Emulator ready, running TC.EXE...');
-          setStatus('Turbo C3 running');
-        }
-      },
-      onError: (err) => { log('Emulator error:', err); setStatus('Error starting Turbo C3'); }
-    });
-
-  } catch (e) {
-    log('Startup failed:', e);
-    setStatus('Startup failed');
-  }
-});
-
-
-  // Stop
-  document.getElementById('stopEmu').addEventListener('click', async () => {
-    if (dosInstance) {
-      try { await dosInstance.stop(); log('Stopped emulator'); }
-      catch (e) { log('Stop failed:', e); }
-      dosInstance = null; ci = null;
-    }
-    setStatus('Stopped');
-  });
-
-  // Quick startup check
-  (function quickCheck(){
-    log('Starting diagnostics...');
-    if (location.protocol === 'file:') log('⚠ Run via a local HTTP server (python -m http.server 8080)');
-    log('Expecting Turboc3.zip next to this file.');
-    if (typeof Dos === 'undefined') setStatus('js-dos missing');
-    else setStatus('Ready');
-  })();
-  </script>
+    <footer>
+      <span>Bundle: <code>Turboc3.zip</code></span>
+      <span>•</span>
+      <span>Runs locally in your browser</span>
+    </footer>
+  </main>
 </body>
 </html>
