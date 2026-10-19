@@ -1,6 +1,8 @@
-# Turbo C3 Web Lab
+# TurboC Web Lab
 
-A browser-hosted Turbo C3 / Turbo C++ DOS development environment powered by **js-dos**.
+**Browser-based Turbo C/C++ IDE for legacy `graphics.h` and BGI computer graphics coursework**, powered by js-dos and WebAssembly.
+
+TurboC Web Lab aims to help students run classic Borland Turbo C/C++ programs, including DOS-era graphics exercises, in a modern browser without manually installing and configuring DOSBox. **The final browser runtime and `graphics.h` compatibility still require end-to-end testing**; this is an experimental compatibility environment, not a general-purpose modern C++ compiler.
 
 The project launches the legacy Turbo C3 environment from a modern browser without requiring a local DOSBox or Turbo C installation. `Turboc3.zip` is treated as the source archive; the browser combines it with `.jsdos/dosbox.conf` to build a valid js-dos bundle at runtime and starts `TURBOC3\BIN\TC.EXE`.
 
@@ -19,6 +21,18 @@ That led us to experiment with running a DOS environment through **js-dos**, loa
 After a fair amount of experimentation, debugging, and learning how the browser runtime behaves, the idea became this project: a **zero-install browser-accessible Turbo C3 environment** aimed particularly at the kind of legacy C/C++ graphics coursework that is still taught today.
 
 The project did not make DOS irrelevant for me—in fact, working through the problem taught me more about DOS, emulation, browser runtimes, and compatibility layers than simply avoiding the old environment would have. What began as an attempt to remove a frustrating setup step became an exploration of how modern web technology can keep legacy development environments usable.
+
+## Who this is for
+
+Students working through legacy **Computer Graphics** coursework, educators maintaining Turbo C/C++ teaching examples, and developers exploring **DOS emulation in the browser**. This environment targets the Borland BGI `graphics.h` workflow; it does not provide the modern standard C++ graphics API.
+
+**Common questions:**
+
+**Can I run `graphics.h` C/C++ programs online?** This project is designed to host the legacy Turbo C3 and BGI environment in a browser. Specific programs and graphics modes need verification on the deployed emulator.
+
+**Is this a modern C++ online compiler?** No. It emulates a legacy DOS toolchain for compatibility with older coursework.
+
+**Do I need DOSBox installed?** No local DOSBox installation is intended; the DOS runtime runs in the browser via js-dos.
 
 ## What this project does
 
@@ -142,6 +156,10 @@ The DOS runtime may also load js-dos emulator deployment files from js-dos infra
 - The emulator wrapper is intentionally separated from the legacy Turbo C files.
 - Local save-state behavior depends on browser storage availability.
 - Replacing `Turboc3.zip` does not require manually editing the archive to add `.jsdos/dosbox.conf`; the page injects the config while building the runtime bundle.
+
+## Discoverability and project documentation
+
+This README uses descriptive, problem-focused language so students and search systems can determine what the project does. Prefer verified examples, clear compatibility notes, screenshots, and accessible deployment documentation over keyword stuffing or unproven claims. See [SEO, AEO & GEO research backlog](docs/SEARCH_DISCOVERY_RESEARCH.md) for future investigation. No optimization guarantees inclusion in AI answers.
 
 ## Redistribution notice
 
